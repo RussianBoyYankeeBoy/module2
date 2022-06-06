@@ -1,0 +1,246 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.OleDb;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace WindowsFormsApp1
+{
+    public partial class Form5 : Form
+    {
+        public static string connectionString = "Provider=Microsoft.Jet.OLEDB.4.0; Data Source=C:\\Users\\Zhalaldin\\Desktop\\dataBase.mdb;";
+        OleDbConnection connection = new OleDbConnection(connectionString);
+        OleDbCommand cmd;
+        OleDbDataAdapter adapter;
+        DataTable dt = new DataTable();
+        public Form5()
+        {
+            InitializeComponent();
+            dataGridView1.ColumnCount = 5;
+            dataGridView1.Columns[0].Name = "Id";
+            dataGridView1.Columns[1].Name = "language";
+            dataGridView1.Columns[2].Name = "date_interview";
+            dataGridView1.Columns[3].Name = "interviewer";
+            dataGridView1.Columns[4].Name = "company";
+
+            dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+            dataGridView1.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dataGridView1.MultiSelect = false;
+            retrieve();
+        }
+
+        private void dataGridView1_MouseClick(object sender, MouseEventArgs e)
+        {
+            textBox1.Text = dataGridView1.SelectedRows[0].Cells[1].Value.ToString();
+            textBox2.Text = dataGridView1.SelectedRows[0].Cells[2].Value.ToString();
+            textBox3.Text = dataGridView1.SelectedRows[0].Cells[3].Value.ToString();
+            textBox4.Text = dataGridView1.SelectedRows[0].Cells[4].Value.ToString();
+        }
+        private void retrieve()
+        {
+            dataGridView1.Rows.Clear();
+            string sql = "SELECT * FROM interview";
+            cmd = new OleDbCommand(sql, connection);
+            try
+            {
+                connection.Open();
+                adapter = new OleDbDataAdapter(cmd);
+                adapter.Fill(dt);
+                foreach (DataRow row in dt.Rows)
+                {
+                    populate(row[0].ToString(), row[1].ToString(), row[2].ToString(), row[3].ToString(), row[4].ToString());
+                }
+                connection.Close();
+                dt.Rows.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                connection.Close();
+            }
+        }
+        private void clearTxt()
+        {
+            textBox1.Text = "";
+            textBox2.Text = "";
+            textBox3.Text = "";
+            textBox4.Text = "";
+        }
+        private void populate(string id, string language, string date_interview, string interviewer, string company)
+        {
+            dataGridView1.Rows.Add(id, language, date_interview, interviewer, company);
+        }
+        private void add(string language, string date_interview, string interviewer, string company)
+        {
+            string sql = "INSERT INTO interview (language, date_interview, interviewer, company) " +
+                "VALUES(@language, @date_interview, @interviewer, @company)";
+            cmd = new OleDbCommand(sql, connection);
+            // add params
+            cmd.Parameters.AddWithValue("@language", language);
+            cmd.Parameters.AddWithValue("@date_interview", date_interview);
+            cmd.Parameters.AddWithValue("@interviewer", interviewer);
+            cmd.Parameters.AddWithValue("@company", company);
+
+            try
+            {
+                connection.Open();
+                if (cmd.ExecuteNonQuery() > 0)
+                {
+                    clearTxt();
+                    MessageBox.Show("Successfully inserted");
+                }
+                connection.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                connection.Close();
+            }
+        }
+        private void update(int id, string name, string description, string phone, string address)
+        {
+            string sql = "UPDATE interview SET language='" + name + "', date_interview='" + description + "', interviewer= '" + phone + "', company= '" + address + "' WHERE Код = " + id + ";";
+            cmd = new OleDbCommand(sql, connection);
+            try
+            {
+                connection.Open();
+                adapter = new OleDbDataAdapter(cmd);
+
+                adapter.UpdateCommand = connection.CreateCommand();
+                adapter.UpdateCommand.CommandText = sql;
+
+                if (adapter.UpdateCommand.ExecuteNonQuery() > 0)
+                {
+                    clearTxt();
+                    MessageBox.Show("Successfully updated");
+                }
+                connection.Close();
+                retrieve();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                connection.Close();
+            }
+        }
+        private void delete(int id)
+        {
+            string sql = "DELETE FROM interview WHERE Код =" + id + ";";
+            cmd = new OleDbCommand(sql, connection);
+            try
+            {
+                connection.Open();
+                adapter = new OleDbDataAdapter(cmd);
+                adapter.DeleteCommand = connection.CreateCommand();
+                adapter.DeleteCommand.CommandText = sql;
+
+                if (MessageBox.Show("Sure for ?", "DELETE", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning) == DialogResult.OK)
+                {
+                    if (cmd.ExecuteNonQuery() > 0)
+                    {
+                        MessageBox.Show("Successfully deleted");
+                    }
+                }
+                connection.Close();
+                retrieve();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                connection.Close();
+            }
+        }
+        // add
+        private void button1_Click(object sender, EventArgs e)
+        {
+            add(textBox1.Text, textBox2.Text, textBox3.Text, textBox4.Text);
+            retrieve();
+        }
+        // delete 
+        private void button4_Click(object sender, EventArgs e)
+        {
+            string selected = dataGridView1.SelectedRows[0].Cells[0].Value.ToString();
+            int id = int.Parse(selected);
+            delete(id);
+        }
+        // update
+        private void button5_Click(object sender, EventArgs e)
+        {
+            string selected = dataGridView1.SelectedRows[0].Cells[0].Value.ToString();
+            int id = int.Parse(selected);
+            update(id, textBox1.Text, textBox2.Text, textBox3.Text, textBox4.Text);
+        }
+        // sort
+        private void button6_Click(object sender, EventArgs e)
+        {
+            dataGridView1.Rows.Clear();
+            string sql = "SELECT * FROM interview ORDER BY " + comboBox1.SelectedItem.ToString();
+            cmd = new OleDbCommand(sql, connection);
+            try
+            {
+                connection.Open();
+                adapter = new OleDbDataAdapter(cmd);
+                adapter.Fill(dt);
+                foreach (DataRow row in dt.Rows) populate(row[0].ToString(), row[1].ToString(), row[2].ToString(), row[3].ToString(), row[4].ToString());
+                connection.Close();
+                dt.Rows.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                connection.Close();
+            }
+        }
+        // search by language
+        private void button2_Click(object sender, EventArgs e)
+        {
+            dataGridView1.Rows.Clear();
+            string sql = "SELECT * FROM interview WHERE language LIKE '" + textBox6.Text + "%'";
+            cmd = new OleDbCommand(sql, connection);
+            try
+            {
+                connection.Open();
+                adapter = new OleDbDataAdapter(cmd);
+                adapter.Fill(dt);
+                foreach (DataRow row in dt.Rows)
+                {
+                    populate(row[0].ToString(), row[1].ToString(), row[2].ToString(), row[3].ToString(), row[4].ToString());
+                }
+                connection.Close();
+                dt.Rows.Clear();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                connection.Close();
+            }
+        }
+        // filter by company
+        private void button3_Click(object sender, EventArgs e)
+        {
+            dataGridView1.Rows.Clear();
+            string sql = "SELECT * FROM interview WHERE company LIKE '" + textBox7.Text + "%'";
+            cmd = new OleDbCommand(sql, connection);
+            try
+            {
+                connection.Open();
+                adapter = new OleDbDataAdapter(cmd);
+                adapter.Fill(dt);
+                foreach (DataRow row in dt.Rows) populate(row[0].ToString(), row[1].ToString(), row[2].ToString(), row[3].ToString(), row[4].ToString());
+                dt.Rows.Clear();
+                connection.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                connection.Close();
+            }
+        }
+    }
+}
